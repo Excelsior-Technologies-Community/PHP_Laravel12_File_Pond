@@ -1,59 +1,276 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 📂 PHP Laravel 12 - FilePond File Upload System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+This project demonstrates a **modern file upload system** built using **Laravel 12** and **FilePond**.
 
-## About Laravel
+Users can **drag & drop files**, upload them asynchronously, and store file records in the database.
+The UI is styled using **Tailwind CSS** for a clean and modern interface.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+# 🚀 Features
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+* **Laravel 12 Backend**
+* **FilePond Drag & Drop Upload**
+* **Asynchronous File Upload**
+* **Unique Folder Storage System**
+* **Database File Record Storage**
+* **Modern UI with Tailwind CSS**
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+# 🛠️ Tech Stack
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+| Technology     | Purpose                 |
+| -------------- | ----------------------- |
+| Laravel 12     | Backend Framework       |
+| FilePond JS    | Drag & Drop File Upload |
+| Tailwind CSS   | UI Styling              |
+| MySQL / SQLite | Database                |
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+# ⚙️ Installation Guide
 
-### Premium Partners
+## 1️⃣ Create Laravel Project
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```bash
+composer create-project laravel/laravel PHP_Laravel12_File_Pond
 
-## Contributing
+cd PHP_Laravel12_File_Pond
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+# 🗄️ Database Setup
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Update your `.env` file with database credentials.
 
-## Security Vulnerabilities
+```env
+DB_DATABASE=your_database
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+# 📦 Create Migration
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Create a migration for storing uploaded files.
+
+```bash
+php artisan make:migration create_file_uploads_table
+```
+
+Open the migration file and add the following columns:
+
+```php
+Schema::create('file_uploads', function (Blueprint $table) {
+    $table->id();
+    $table->string('filename');
+    $table->string('folder');
+    $table->timestamps();
+});
+```
+
+Run migration:
+
+```bash
+php artisan migrate
+```
+
+Create a symbolic storage link:
+
+```bash
+php artisan storage:link
+```
+
+---
+
+# 📄 Model
+
+Create the model:
+
+```bash
+php artisan make:model FileUpload
+```
+
+File:
+
+```
+app/Models/FileUpload.php
+```
+
+```php
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class FileUpload extends Model
+{
+    protected $fillable = ['filename', 'folder'];
+}
+```
+
+---
+
+# 🎮 Controller
+
+Create controller:
+
+```bash
+php artisan make:controller FileUploadController
+```
+
+File:
+
+```
+app/Http/Controllers/FileUploadController.php
+```
+
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\FileUpload;
+
+class FileUploadController extends Controller
+{
+    public function index()
+    {
+        $files = FileUpload::latest()->get();
+        return view('welcome', compact('files'));
+    }
+
+    public function store(Request $request)
+    {
+        if ($request->hasFile('avatar')) {
+
+            $file = $request->file('avatar');
+
+            $filename = $file->getClientOriginalName();
+
+            $folder = uniqid() . '-' . now()->timestamp;
+
+            $file->storeAs('avatars/' . $folder, $filename);
+
+            FileUpload::create([
+                'filename' => $filename,
+                'folder' => $folder
+            ]);
+
+            return $folder;
+        }
+
+        return '';
+    }
+}
+```
+
+---
+
+# 🛣️ Routes
+
+Open:
+
+```
+routes/web.php
+```
+
+Add:
+
+```php
+use App\Http\Controllers\FileUploadController;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/', [FileUploadController::class, 'index']);
+
+Route::post('/upload', [FileUploadController::class, 'store']);
+```
+
+---
+
+# 🎨 Blade View
+
+Create the view file:
+
+```
+resources/views/welcome.blade.php
+```
+
+Add the **FilePond + Tailwind UI code** you used for drag & drop file upload.
+
+This interface allows users to:
+
+* Drag & Drop files
+* Upload files asynchronously
+* View uploaded files
+
+---
+
+# 📸 System Architecture
+
+**Client Side**
+
+* FilePond UI captures the file
+* Drag & Drop interface improves UX
+
+**Upload Process**
+
+* FilePond sends the file asynchronously to the Laravel controller
+
+**Storage**
+
+* Files are stored in:
+
+```
+storage/app/avatars/{unique-folder}
+```
+
+**Database**
+
+File metadata is saved in:
+
+```
+file_uploads table
+```
+
+Columns:
+
+* filename
+* folder
+* timestamps
+
+---
+
+# ▶️ Run the Project
+
+Start the Laravel development server.
+
+```bash
+php artisan serve
+```
+
+Open in browser:
+
+```
+http://localhost:8000
+```
+
+Your **Drag & Drop File Upload System** is now ready.
+
+---
+# Output
+<img width="890" height="374" alt="image" src="https://github.com/user-attachments/assets/b7e4b57d-e13b-4586-8e28-95123832297d" />
+
+
+# 👨‍💻 Developed By
+
+**Manav Sanchela**
+
+---
+
+⭐ If you found this project helpful, consider giving it a **star on GitHub**.

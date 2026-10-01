@@ -6,25 +6,35 @@ use Illuminate\Support\Facades\Storage;
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Laravel 12 FilePond - File Manager</title>
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
 
+    <meta name="csrf-token"
+        content="{{ csrf_token() }}">
+
+    <title>Laravel 12 FilePond - Advanced File Manager</title>
+
+    {{-- FilePond CSS --}}
     <link
-        href="https://unpkg.com/filepond/dist/filepond.css"
+        href="https://unpkg.com/filepond@4.32.7/dist/filepond.min.css"
+        rel="stylesheet">
+
+    {{-- FilePond File Type Validation CSS --}}
+    <link
+        href="https://unpkg.com/filepond-plugin-file-validate-type@1.2.9/dist/filepond-plugin-file-validate-type.min.css"
         rel="stylesheet">
 
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
         rel="stylesheet">
-    <link
-        href="https://unpkg.com/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.css"
-        rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
+
         body {
             font-family: 'Inter', sans-serif;
         }
@@ -36,730 +46,1109 @@ use Illuminate\Support\Facades\Storage;
         .filepond--drop-label {
             color: #4b5563;
         }
+
     </style>
+
 </head>
+
 
 <body class="bg-slate-50 min-h-screen pb-20">
 
-    <!-- Header -->
-    <header class="bg-white border-b border-slate-200 mb-8">
-        <div class="max-w-7xl mx-auto px-4 py-6">
 
-            <h1 class="text-2xl font-bold text-slate-800">
-                File Manager
-            </h1>
+<header class="bg-white border-b border-slate-200 mb-8">
 
-            <p class="text-slate-500 text-sm mt-1">
-                Laravel 12 + FilePond File Upload Management System
+    <div class="max-w-7xl mx-auto px-4 py-6">
+
+        <h1 class="text-2xl font-bold text-slate-800">
+            Advanced File Manager
+        </h1>
+
+        <p class="text-slate-500 text-sm mt-1">
+            Laravel 12 + FilePond Upload Management
+        </p>
+
+    </div>
+
+</header>
+
+
+<main class="max-w-7xl mx-auto px-4">
+
+
+@if(session('success'))
+
+<div class="mb-6 bg-green-50 border border-green-200
+            text-green-700 px-4 py-3 rounded-lg">
+
+    {{ session('success') }}
+
+</div>
+
+@endif
+
+
+@if(session('error'))
+
+<div class="mb-6 bg-red-50 border border-red-200
+            text-red-700 px-4 py-3 rounded-lg">
+
+    {{ session('error') }}
+
+</div>
+
+@endif
+
+
+{{-- Statistics --}}
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+
+
+    <div class="bg-white rounded-xl shadow-sm
+                border border-slate-200 p-6">
+
+        <p class="text-sm text-slate-500">
+            Total Files
+        </p>
+
+        <p class="text-3xl font-bold text-slate-800 mt-2">
+            {{ $totalFiles }}
+        </p>
+
+    </div>
+
+
+    <div class="bg-white rounded-xl shadow-sm
+                border border-slate-200 p-6">
+
+        <p class="text-sm text-slate-500">
+            Uploaded Today
+        </p>
+
+        <p class="text-3xl font-bold text-green-600 mt-2">
+            {{ $todayUploads }}
+        </p>
+
+    </div>
+
+
+    <div class="bg-white rounded-xl shadow-sm
+                border border-slate-200 p-6">
+
+        <p class="text-sm text-slate-500">
+            Total Storage
+        </p>
+
+        <p class="text-3xl font-bold text-purple-600 mt-2">
+
+            {{ number_format($totalStorage / 1024 / 1024, 2) }}
+
+            <span class="text-base">
+                MB
+            </span>
+
+        </p>
+
+    </div>
+
+
+    <div class="bg-white rounded-xl shadow-sm
+                border border-slate-200 p-6">
+
+        <p class="text-sm text-slate-500">
+            Filtered Files
+        </p>
+
+        <p class="text-3xl font-bold text-blue-600 mt-2">
+            {{ $filteredCount }}
+        </p>
+
+        <p class="text-xs text-slate-400 mt-1">
+
+            {{ number_format($filteredStorage / 1024 / 1024, 2) }}
+            MB
+
+        </p>
+
+    </div>
+
+
+</div>
+
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+
+{{-- Upload --}}
+
+<div>
+
+
+<div class="bg-white p-6 rounded-xl
+            shadow-sm border border-slate-200">
+
+    <h2 class="text-lg font-semibold text-slate-700 mb-4">
+        Upload New Files
+    </h2>
+
+
+    <input
+        type="file"
+        class="filepond"
+        name="avatar"
+        multiple>
+
+
+    <p class="mt-3 text-xs text-slate-400 text-center">
+
+        Maximum 10 MB per file · Maximum 10 files
+
+    </p>
+
+</div>
+
+
+{{-- Statistics --}}
+
+<div class="bg-white p-6 rounded-xl
+            shadow-sm border border-slate-200 mt-6">
+
+    <h3 class="font-semibold text-slate-700 mb-4">
+        File Type Statistics
+    </h3>
+
+
+    @forelse($fileTypeStats as $extension => $count)
+
+        <div class="flex justify-between items-center
+                    py-2 border-b border-slate-100">
+
+            <span class="bg-slate-100 px-2 py-1
+                         rounded text-xs font-semibold uppercase">
+
+                {{ $extension }}
+
+            </span>
+
+            <span class="text-sm font-semibold">
+                {{ $count }}
+            </span>
+
+        </div>
+
+    @empty
+
+        <p class="text-sm text-slate-400">
+            No file statistics available.
+        </p>
+
+    @endforelse
+
+</div>
+
+
+{{-- Recent --}}
+
+<div class="bg-white p-6 rounded-xl
+            shadow-sm border border-slate-200 mt-6">
+
+    <h3 class="font-semibold text-slate-700 mb-4">
+        Recent Uploads
+    </h3>
+
+
+    @forelse($recentUploads as $recent)
+
+        <div class="py-3 border-b border-slate-100">
+
+            <p class="text-sm font-medium truncate">
+
+                {{ $recent->original_filename ?: $recent->filename }}
+
+            </p>
+
+            <p class="text-xs text-slate-400">
+
+                {{ $recent->created_at->diffForHumans() }}
+
             </p>
 
         </div>
-    </header>
 
-    <main class="max-w-7xl mx-auto px-4">
+    @empty
 
-        <!-- Success Message -->
-        @if(session('success'))
-        <div class="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-            {{ session('success') }}
-        </div>
-        @endif
+        <p class="text-sm text-slate-400">
+            No recent uploads.
+        </p>
 
+    @endforelse
 
-        <!-- Analytics Dashboard -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-
-            <!-- Total Files -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <div class="flex items-center justify-between">
-
-                    <div>
-                        <p class="text-sm text-slate-500">
-                            Total Files
-                        </p>
-
-                        <p class="text-3xl font-bold text-slate-800 mt-2">
-                            {{ $totalFiles }}
-                        </p>
-                    </div>
-
-                    <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <svg class="h-6 w-6 text-blue-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24">
-
-                            <path stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                            </path>
-
-                        </svg>
-                    </div>
-
-                </div>
-            </div>
+</div>
 
 
-            <!-- Today's Uploads -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <div class="flex items-center justify-between">
-
-                    <div>
-                        <p class="text-sm text-slate-500">
-                            Uploaded Today
-                        </p>
-
-                        <p class="text-3xl font-bold text-slate-800 mt-2">
-                            {{ $todayUploads }}
-                        </p>
-                    </div>
-
-                    <div class="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-                        <svg class="h-6 w-6 text-green-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24">
-
-                            <path stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V3m0 0L8 7m4-4l4 4">
-                            </path>
-
-                        </svg>
-                    </div>
-
-                </div>
-            </div>
+</div>
 
 
-            <!-- Storage -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <div class="flex items-center justify-between">
+{{-- Management --}}
 
-                    <div>
-                        <p class="text-sm text-slate-500">
-                            Storage Used
-                        </p>
+<div class="lg:col-span-2">
 
-                        <p class="text-3xl font-bold text-slate-800 mt-2">
-                            {{ number_format($totalStorage / 1024 / 1024, 2) }}
-                            <span class="text-base font-medium">MB</span>
-                        </p>
-                    </div>
 
-                    <div class="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
-                        <svg class="h-6 w-6 text-purple-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24">
+<div class="bg-white rounded-xl
+            shadow-sm border border-slate-200 overflow-hidden">
 
-                            <path stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v12a2 2 0 002 2h10a2 2 0 002-2V8">
-                            </path>
 
-                        </svg>
-                    </div>
+{{-- Header --}}
 
-                </div>
-            </div>
+<div class="px-6 py-4 border-b border-slate-100">
+
+    <div class="flex flex-col md:flex-row
+                md:items-center md:justify-between gap-3">
+
+        <div>
+
+            <h3 class="font-semibold text-slate-800">
+                File Management
+            </h3>
+
+            <p class="text-xs text-slate-400 mt-1">
+                Search, filter, sort and manage files.
+            </p>
 
         </div>
 
 
-        <!-- Main Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {{-- FIXED: files.export.csv --}}
 
+        <a
+            href="{{ route('files.export.csv', request()->query()) }}"
+            class="px-4 py-2 bg-green-600
+                   hover:bg-green-700 text-white
+                   rounded-lg text-sm font-medium text-center">
 
-            <!-- Upload Section -->
+            Export CSV
 
-            <div class="lg:col-span-1">
+        </a>
 
-                <!-- Upload New File -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 sticky top-5">
+    </div>
 
-                    <h2 class="text-lg font-semibold text-slate-700 mb-4">
-                        Upload New File
-                    </h2>
+</div>
 
-                    <input
-                        type="file"
-                        class="filepond"
-                        name="avatar"
-                        multiple>
 
-                    <p class="mt-3 text-xs text-slate-400 text-center leading-5">
-                        Drag & drop your files here or browse.<br>
-                        Maximum 10 MB per file · Maximum 10 files<br>
-                        JPG, PNG, GIF, WEBP, PDF, DOC, XLS, PPT, TXT, CSV & ZIP
-                    </p>
+{{-- Filters --}}
 
-                </div>
+<div class="p-6 bg-slate-50 border-b border-slate-100">
 
 
-                <!-- Upload Security -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mt-6">
+<form
+    method="GET"
+    action="{{ route('files.index') }}"
+    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
 
-                    <h3 class="font-semibold text-slate-700 mb-4">
-                        Upload Security
-                    </h3>
 
-                    <div class="space-y-3">
+<input
+    type="text"
+    name="search"
+    value="{{ $search }}"
+    placeholder="Search filename..."
+    class="w-full rounded-lg border
+           border-slate-300 px-4 py-2.5 text-sm">
 
-                        <!-- File Type Validation -->
-                        <div class="flex items-center gap-3">
 
-                            <div class="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                <span class="text-green-600 text-sm">✓</span>
-                            </div>
+<select
+    name="type"
+    class="w-full rounded-lg border
+           border-slate-300 px-4 py-2.5 text-sm bg-white">
 
-                            <div>
-                                <p class="text-sm font-medium text-slate-700">
-                                    File Type Validation
-                                </p>
+    <option value="">
+        All File Types
+    </option>
 
-                                <p class="text-xs text-slate-400">
-                                    Only approved file types are accepted.
-                                </p>
-                            </div>
+    @foreach($fileTypes as $fileType)
 
-                        </div>
+        <option
+            value="{{ $fileType }}"
+            {{ $type === $fileType ? 'selected' : '' }}>
 
+            {{ strtoupper($fileType) }}
 
-                        <!-- Size Protection -->
-                        <div class="flex items-center gap-3">
+        </option>
 
-                            <div class="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                <span class="text-green-600 text-sm">✓</span>
-                            </div>
+    @endforeach
 
-                            <div>
-                                <p class="text-sm font-medium text-slate-700">
-                                    Size Protection
-                                </p>
+</select>
 
-                                <p class="text-xs text-slate-400">
-                                    Maximum 10 MB per file.
-                                </p>
-                            </div>
 
-                        </div>
+<select
+    name="size"
+    class="w-full rounded-lg border
+           border-slate-300 px-4 py-2.5 text-sm bg-white">
 
+    <option value="">
+        All File Sizes
+    </option>
 
-                        <!-- Safe File Naming -->
-                        <div class="flex items-center gap-3">
+    <option
+        value="small"
+        {{ $size === 'small' ? 'selected' : '' }}>
 
-                            <div class="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                <span class="text-green-600 text-sm">✓</span>
-                            </div>
+        Small &lt; 1 MB
 
-                            <div>
-                                <p class="text-sm font-medium text-slate-700">
-                                    Safe File Naming
-                                </p>
+    </option>
 
-                                <p class="text-xs text-slate-400">
-                                    Uploaded files receive unique server-side names.
-                                </p>
-                            </div>
+    <option
+        value="medium"
+        {{ $size === 'medium' ? 'selected' : '' }}>
 
-                        </div>
+        Medium 1–5 MB
 
-                    </div>
+    </option>
 
-                </div>
+    <option
+        value="large"
+        {{ $size === 'large' ? 'selected' : '' }}>
 
+        Large &gt; 5 MB
 
-                <!-- File Type Statistics -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mt-6">
+    </option>
 
-                    <h3 class="font-semibold text-slate-700 mb-4">
-                        File Type Statistics
-                    </h3>
+</select>
 
-                    @forelse($fileTypeStats as $extension => $count)
 
-                    <div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
+<select
+    name="date"
+    class="w-full rounded-lg border
+           border-slate-300 px-4 py-2.5 text-sm bg-white">
 
-                        <div class="flex items-center gap-2">
+    <option value="">
+        Any Date
+    </option>
 
-                            <span class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs font-semibold uppercase">
-                                {{ $extension }}
-                            </span>
+    <option
+        value="today"
+        {{ $date === 'today' ? 'selected' : '' }}>
 
-                        </div>
+        Today
 
-                        <span class="text-sm font-semibold text-slate-600">
-                            {{ $count }}
-                        </span>
+    </option>
 
-                    </div>
+    <option
+        value="7days"
+        {{ $date === '7days' ? 'selected' : '' }}>
 
-                    @empty
+        Last 7 Days
 
-                    <p class="text-sm text-slate-400">
-                        No file statistics available.
-                    </p>
+    </option>
 
-                    @endforelse
+    <option
+        value="30days"
+        {{ $date === '30days' ? 'selected' : '' }}>
 
-                </div>
+        Last 30 Days
 
-            </div>
+    </option>
 
+</select>
 
-            <!-- File Management Section -->
-            <div class="lg:col-span-2">
 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+<select
+    name="sort"
+    class="w-full rounded-lg border
+           border-slate-300 px-4 py-2.5 text-sm bg-white">
 
-                    <!-- Header -->
-                    <div class="px-6 py-4 border-b border-slate-100">
+    <option
+        value="newest"
+        {{ $sort === 'newest' ? 'selected' : '' }}>
 
-                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        Newest First
 
-                            <div>
+    </option>
 
-                                <h3 class="font-semibold text-slate-800">
-                                    File Management
-                                </h3>
+    <option
+        value="oldest"
+        {{ $sort === 'oldest' ? 'selected' : '' }}>
 
-                                <p class="text-xs text-slate-400 mt-1">
-                                    Search, filter, download and manage uploaded files.
-                                </p>
+        Oldest First
 
-                            </div>
+    </option>
 
-                            <span class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-medium">
-                                {{ $files->total() }} Files
-                            </span>
+    <option
+        value="name_asc"
+        {{ $sort === 'name_asc' ? 'selected' : '' }}>
 
-                        </div>
+        Name A-Z
 
-                    </div>
+    </option>
 
+    <option
+        value="name_desc"
+        {{ $sort === 'name_desc' ? 'selected' : '' }}>
 
-                    <!-- Search & Filter -->
-                    <div class="p-6 bg-slate-50 border-b border-slate-100">
+        Name Z-A
 
-                        <form
-                            method="GET"
-                            action="{{ route('files.index') }}"
-                            class="grid grid-cols-1 md:grid-cols-3 gap-3">
+    </option>
 
-                            <!-- Search -->
-                            <div class="md:col-span-2">
+    <option
+        value="largest"
+        {{ $sort === 'largest' ? 'selected' : '' }}>
 
-                                <input
-                                    type="text"
-                                    name="search"
-                                    value="{{ $search }}"
-                                    placeholder="Search by filename..."
-                                    class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-blue-500">
+        Largest First
 
-                            </div>
+    </option>
 
+    <option
+        value="smallest"
+        {{ $sort === 'smallest' ? 'selected' : '' }}>
 
-                            <!-- Type Filter -->
-                            <div>
+        Smallest First
 
-                                <select
-                                    name="type"
-                                    class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm bg-white">
+    </option>
 
-                                    <option value="">
-                                        All File Types
-                                    </option>
+</select>
 
-                                    @foreach($fileTypes as $fileType)
 
-                                    <option
-                                        value="{{ $fileType }}"
-                                        {{ $type === $fileType ? 'selected' : '' }}>
-                                        {{ strtoupper($fileType) }}
-                                    </option>
+<div class="flex gap-2">
 
-                                    @endforeach
+    <button
+        type="submit"
+        class="px-4 py-2.5 bg-blue-600
+               hover:bg-blue-700 text-white
+               rounded-lg text-sm font-medium">
 
-                                </select>
+        Apply Filters
 
-                            </div>
+    </button>
 
 
-                            <!-- Buttons -->
-                            <div class="md:col-span-3 flex gap-2">
+    <a
+        href="{{ route('files.index') }}"
+        class="px-4 py-2.5 bg-white
+               border border-slate-300
+               rounded-lg text-sm font-medium">
 
-                                <button
-                                    type="submit"
-                                    class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">
-                                    Search & Filter
-                                </button>
+        Reset
 
-                                <a
-                                    href="{{ route('files.index') }}"
-                                    class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-lg text-sm font-medium">
-                                    Reset
-                                </a>
+    </a>
 
-                            </div>
+</div>
 
-                        </form>
 
-                    </div>
+</form>
 
 
-                    <!-- Files Table -->
-                    <div class="overflow-x-auto">
+<div class="mt-4 text-sm text-slate-500">
 
-                        <table class="w-full text-left">
+    <strong>{{ $filteredCount }}</strong>
+    filtered files ·
 
-                            <thead class="bg-slate-50 border-b border-slate-100">
+    <strong>
+        {{ number_format($filteredStorage / 1024 / 1024, 2) }} MB
+    </strong>
 
-                                <tr>
+</div>
 
-                                    <th class="px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                                        File Info
-                                    </th>
+</div>
 
-                                    <th class="px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                                        Type
-                                    </th>
 
-                                    <th class="px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                                        Folder
-                                    </th>
+{{-- Bulk Actions --}}
 
-                                    <th class="px-6 py-3 text-xs font-semibold text-slate-500 uppercase text-right">
-                                        Actions
-                                    </th>
+<form
+    id="bulkForm"
+    method="POST">
 
-                                </tr>
+@csrf
 
-                            </thead>
 
+<div class="px-6 py-4 bg-white
+            border-b border-slate-100
+            flex flex-wrap gap-2 items-center">
 
-                            <tbody class="divide-y divide-slate-100">
+    <button
+        type="button"
+        onclick="selectAllFiles()"
+        class="px-3 py-2 bg-slate-100
+               rounded-lg text-xs font-medium">
 
-                                @forelse($files as $file)
+        Select All
 
-                                @php
-                                $extension = strtolower(
-                                pathinfo($file->filename, PATHINFO_EXTENSION)
-                                );
+    </button>
 
-                                $filePath = 'avatars/' . $file->folder . '/' . $file->filename;
 
-                                $fileSize = Storage::disk('public')->exists($filePath)
-                                ? Storage::disk('public')->size($filePath)
-                                : 0;
-                                @endphp
+    <button
+        type="button"
+        onclick="clearSelection()"
+        class="px-3 py-2 bg-slate-100
+               rounded-lg text-xs font-medium">
 
-                                <tr class="hover:bg-slate-50 transition-colors">
+        Clear
 
-                                    <!-- File Info -->
-                                    <td class="px-6 py-4">
+    </button>
 
-                                        <div class="flex items-center">
 
-                                            <div class="h-10 w-10 flex-shrink-0 rounded bg-blue-50 flex items-center justify-center">
+    <button
+        type="submit"
+        formaction="{{ route('files.bulk-delete') }}"
+        onclick="return confirmBulkDelete()"
+        class="px-3 py-2 bg-red-600
+               text-white rounded-lg text-xs font-medium">
 
-                                                <svg
-                                                    class="h-6 w-6 text-blue-500"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24">
+        Bulk Delete
 
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        stroke-width="2"
-                                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </button>
 
-                                                </svg>
 
-                                            </div>
+    <button
+        type="submit"
+        formaction="{{ route('files.bulk-download') }}"
+        onclick="return checkSelection()"
+        class="px-3 py-2 bg-purple-600
+               text-white rounded-lg text-xs font-medium">
 
-                                            <div class="ml-4">
+        Download ZIP
 
-                                                <div class="text-sm font-medium text-slate-900 max-w-xs truncate">
-                                                    {{ $file->filename }}
-                                                </div>
+    </button>
 
-                                                <div class="text-xs text-slate-400">
-                                                    Uploaded {{ $file->created_at->diffForHumans() }}
-                                                </div>
 
-                                                <div class="text-xs text-slate-400 mt-1">
-                                                    {{ number_format($fileSize / 1024, 2) }} KB
-                                                </div>
+    <span
+        id="selectedCount"
+        class="text-xs text-slate-500">
 
-                                            </div>
+        0 selected
 
-                                        </div>
+    </span>
 
-                                    </td>
+</div>
 
 
-                                    <!-- Type -->
-                                    <td class="px-6 py-4">
+{{-- Table --}}
 
-                                        <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-semibold uppercase">
-                                            {{ $extension ?: 'FILE' }}
-                                        </span>
+<div class="overflow-x-auto">
 
-                                    </td>
+<table class="w-full text-left">
 
 
-                                    <!-- Folder -->
-                                    <td class="px-6 py-4 text-sm text-slate-500 font-mono">
+<thead class="bg-slate-50 border-b border-slate-100">
 
-                                        {{ Str::limit($file->folder, 15) }}
+<tr>
 
-                                    </td>
+<th class="px-6 py-3">
 
+    <input
+        type="checkbox"
+        id="selectAll"
+        onclick="toggleAll(this)"
+        class="h-4 w-4">
 
-                                    <!-- Actions -->
-                                    <td class="px-6 py-4">
+</th>
 
-                                        <div class="flex justify-end items-center gap-2">
 
-                                            <!-- Download -->
-                                            <a
-                                                href="{{ route('files.download', $file) }}"
-                                                class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded shadow-sm text-white bg-blue-600 hover:bg-blue-700">
-                                                Download
-                                            </a>
+<th class="px-6 py-3 text-xs
+           font-semibold text-slate-500 uppercase">
 
+    File
 
-                                            <!-- Delete -->
-                                            <form
-                                                method="POST"
-                                                action="{{ route('files.destroy', $file) }}"
-                                                onsubmit="return confirm('Are you sure you want to delete this file?');">
+</th>
 
-                                                @csrf
-                                                @method('DELETE')
 
-                                                <button
-                                                    type="submit"
-                                                    class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded shadow-sm text-white bg-red-600 hover:bg-red-700">
-                                                    Delete
-                                                </button>
+<th class="px-6 py-3 text-xs
+           font-semibold text-slate-500 uppercase">
 
-                                            </form>
+    Type
 
-                                        </div>
+</th>
 
-                                    </td>
 
-                                </tr>
+<th class="px-6 py-3 text-xs
+           font-semibold text-slate-500 uppercase">
 
-                                @empty
+    Size
 
-                                <tr>
+</th>
 
-                                    <td
-                                        colspan="4"
-                                        class="px-6 py-12 text-center text-slate-400 italic">
-                                        No files found.
 
-                                    </td>
+<th class="px-6 py-3 text-xs
+           font-semibold text-slate-500 uppercase">
 
-                                </tr>
+    Actions
 
-                                @endforelse
+</th>
 
-                            </tbody>
+</tr>
 
-                        </table>
+</thead>
 
-                    </div>
 
+<tbody class="divide-y divide-slate-100">
 
-                    <!-- Pagination -->
-                    @if($files->hasPages())
 
-                    <div class="px-6 py-4 border-t border-slate-100">
+@forelse($files as $file)
 
-                        {{ $files->links() }}
 
-                    </div>
+@php
 
-                    @endif
+$extension = $file->extension;
 
-                </div>
+@endphp
 
 
-                <!-- Recent Uploads -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 mt-6 p-6">
+<tr class="hover:bg-slate-50">
 
-                    <h3 class="font-semibold text-slate-700 mb-4">
-                        Recent Upload Activity
-                    </h3>
 
-                    <div class="space-y-3">
+<td class="px-6 py-4">
 
-                        @forelse($recentUploads as $recent)
+    <input
+        type="checkbox"
+        name="ids[]"
+        value="{{ $file->id }}"
+        class="file-checkbox h-4 w-4"
+        onchange="updateSelectedCount()">
 
-                        <div class="flex items-center justify-between border-b border-slate-100 pb-3 last:border-0">
+</td>
 
-                            <div>
 
-                                <p class="text-sm font-medium text-slate-800">
-                                    {{ $recent->filename }}
-                                </p>
+<td class="px-6 py-4">
 
-                                <p class="text-xs text-slate-400">
-                                    {{ $recent->created_at->format('d M Y, h:i A') }}
-                                </p>
+    <div class="max-w-xs">
 
-                            </div>
+        <div class="text-sm font-medium
+                    text-slate-900 truncate">
 
-                            <span class="text-xs text-green-600 font-medium">
-                                Uploaded
-                            </span>
-
-                        </div>
-
-                        @empty
-
-                        <p class="text-sm text-slate-400">
-                            No recent uploads.
-                        </p>
-
-                        @endforelse
-
-                    </div>
-
-                </div>
-
-            </div>
+            {{ $file->original_filename ?: $file->filename }}
 
         </div>
 
-    </main>
+
+        <div class="text-xs text-slate-400">
+
+            {{ $file->created_at->diffForHumans() }}
+
+        </div>
+
+    </div>
+
+</td>
 
 
+<td class="px-6 py-4">
 
-    <script src="https://unpkg.com/filepond-plugin-file-validate-size/dist/filepond-plugin-file-validate-size.js"></script>
+    <span
+        class="bg-slate-100 text-slate-600
+               px-2 py-1 rounded text-xs
+               font-semibold uppercase">
 
-    <script src="https://unpkg.com/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.js"></script>
+        {{ $extension }}
 
-    <script src="https://unpkg.com/filepond/dist/filepond.js"></script>
+    </span>
 
-    <script>
-        FilePond.registerPlugin(
-            FilePondPluginFileValidateSize,
-            FilePondPluginFileValidateType
+</td>
+
+
+<td class="px-6 py-4 text-sm text-slate-500">
+
+    {{ $file->size_formatted }}
+
+</td>
+
+
+<td class="px-6 py-4">
+
+
+<div class="flex flex-wrap gap-2">
+
+
+@if(
+    str_starts_with($file->mime_type ?? '', 'image/') ||
+    ($file->mime_type ?? '') === 'application/pdf' ||
+    str_starts_with($file->mime_type ?? '', 'text/')
+)
+
+<a
+    href="{{ route('files.preview', $file) }}"
+    target="_blank"
+    class="px-3 py-1.5 bg-slate-600
+           text-white rounded text-xs">
+
+    Preview
+
+</a>
+
+@endif
+
+
+<a
+    href="{{ route('files.download', $file) }}"
+    class="px-3 py-1.5 bg-blue-600
+           text-white rounded text-xs">
+
+    Download
+
+</a>
+
+
+<form
+    method="POST"
+    action="{{ route('files.duplicate', $file) }}">
+
+    @csrf
+
+    <button
+        type="submit"
+        class="px-3 py-1.5 bg-purple-600
+               text-white rounded text-xs">
+
+        Duplicate
+
+    </button>
+
+</form>
+
+
+<form
+    method="POST"
+    action="{{ route('files.destroy', $file) }}"
+    onsubmit="return confirm('Delete this file?');">
+
+    @csrf
+    @method('DELETE')
+
+    <button
+        type="submit"
+        class="px-3 py-1.5 bg-red-600
+               text-white rounded text-xs">
+
+        Delete
+
+    </button>
+
+</form>
+
+
+</div>
+
+</td>
+
+</tr>
+
+
+@empty
+
+
+<tr>
+
+<td
+    colspan="5"
+    class="px-6 py-12
+           text-center text-slate-400">
+
+    No files found.
+
+</td>
+
+</tr>
+
+
+@endforelse
+
+
+</tbody>
+
+</table>
+
+</div>
+
+
+</form>
+
+
+{{-- Pagination --}}
+
+@if($files->hasPages())
+
+<div class="px-6 py-4 border-t border-slate-100">
+
+    {{ $files->links() }}
+
+</div>
+
+@endif
+
+
+</div>
+
+</div>
+
+</div>
+
+</main>
+
+
+{{-- FilePond JS --}}
+<script src="https://unpkg.com/filepond@4.32.7/dist/filepond.min.js"></script>
+
+{{-- FilePond File Size Validation --}}
+<script src="https://unpkg.com/filepond-plugin-file-validate-size@2.2.8/dist/filepond-plugin-file-validate-size.min.js"></script>
+
+{{-- FilePond File Type Validation --}}
+<script src="https://unpkg.com/filepond-plugin-file-validate-type@1.2.9/dist/filepond-plugin-file-validate-type.min.js"></script>
+
+
+<script>
+
+FilePond.registerPlugin(
+    FilePondPluginFileValidateSize,
+    FilePondPluginFileValidateType
+);
+
+
+const inputElement =
+    document.querySelector('input[type="file"]');
+
+
+const pond =
+    FilePond.create(inputElement, {
+
+        allowMultiple: true,
+
+        allowReorder: true,
+
+        allowProcess: true,
+
+        maxFiles: 10,
+
+        maxFileSize: '10MB',
+
+        acceptedFileTypes: [
+
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+
+            'application/pdf',
+
+            'text/plain',
+            'text/csv',
+
+            'application/msword',
+
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+
+            'application/vnd.ms-excel',
+
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+
+            'application/vnd.ms-powerpoint',
+
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+
+            'application/zip'
+
+        ],
+
+        labelIdle:
+            'Drag & Drop your files or <span class="filepond--label-action">Browse</span>',
+
+        labelMaxFileSizeExceeded:
+            'File is too large',
+
+        labelMaxFileSize:
+            'Maximum file size is {filesize}',
+
+        labelFileTypeNotAllowed:
+            'File type is not allowed',
+
+        fileValidateTypeLabelExpectedTypes:
+            'Allowed file types: {allButLastType} or {lastType}',
+
+        labelFileProcessing:
+            'Uploading',
+
+        labelFileProcessingComplete:
+            'Upload complete',
+
+        labelFileProcessingError:
+            'Upload failed',
+
+        imagePreviewHeight: 170,
+
+        imageCropAspectRatio: '1:1',
+
+        imageResizeTargetWidth: 200,
+
+        imageResizeTargetHeight: 200,
+
+        stylePanelLayout: 'compact'
+
+    });
+
+
+FilePond.setOptions({
+
+    server: {
+
+        process: {
+
+            url: '{{ route('files.upload') }}',
+
+            method: 'POST',
+
+            headers: {
+
+                'X-CSRF-TOKEN':
+                    '{{ csrf_token() }}'
+
+            },
+
+            onload: (response) => {
+
+                console.log(
+                    'Upload successful:',
+                    response
+                );
+
+                setTimeout(function () {
+                    window.location.reload();
+                }, 500);
+
+                return response;
+
+            },
+
+            onerror: (response) => {
+
+                console.error(
+                    'Upload failed:',
+                    response
+                );
+
+                return response;
+
+            }
+
+        }
+
+    }
+
+});
+
+
+function getCheckboxes()
+{
+    return document.querySelectorAll(
+        '.file-checkbox'
+    );
+}
+
+
+function updateSelectedCount()
+{
+    const selected =
+        document.querySelectorAll(
+            '.file-checkbox:checked'
+        ).length;
+
+    document.getElementById(
+        'selectedCount'
+    ).innerText =
+        selected + ' selected';
+}
+
+
+function toggleAll(master)
+{
+    getCheckboxes().forEach(
+        checkbox => {
+
+            checkbox.checked =
+                master.checked;
+
+        }
+    );
+
+    updateSelectedCount();
+}
+
+
+function selectAllFiles()
+{
+    getCheckboxes().forEach(
+        checkbox => {
+
+            checkbox.checked = true;
+
+        }
+    );
+
+    document.getElementById(
+        'selectAll'
+    ).checked = true;
+
+    updateSelectedCount();
+}
+
+
+function clearSelection()
+{
+    getCheckboxes().forEach(
+        checkbox => {
+
+            checkbox.checked = false;
+
+        }
+    );
+
+    document.getElementById(
+        'selectAll'
+    ).checked = false;
+
+    updateSelectedCount();
+}
+
+
+function checkSelection()
+{
+    const selected =
+        document.querySelectorAll(
+            '.file-checkbox:checked'
+        ).length;
+
+    if (selected === 0) {
+
+        alert(
+            'Please select at least one file.'
         );
 
-        const inputElement =
-            document.querySelector('input[type="file"]');
+        return false;
+    }
 
-        const pond = FilePond.create(inputElement, {
+    return true;
+}
 
-            allowMultiple: true,
 
-            allowReorder: true,
+function confirmBulkDelete()
+{
+    const selected =
+        document.querySelectorAll(
+            '.file-checkbox:checked'
+        ).length;
 
-            allowProcess: true,
+    if (selected === 0) {
 
-            maxFiles: 10,
+        alert(
+            'Please select at least one file.'
+        );
 
-            maxFileSize: '10MB',
+        return false;
+    }
 
-            acceptedFileTypes: [
-                'image/jpeg',
-                'image/png',
-                'image/gif',
-                'image/webp',
-                'application/pdf',
-                'text/plain',
-                'text/csv',
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'application/vnd.ms-excel',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'application/vnd.ms-powerpoint',
-                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-                'application/zip'
-            ],
+    return confirm(
+        'Delete ' +
+        selected +
+        ' selected file(s)?'
+    );
+}
 
-            labelIdle: 'Drag & Drop your files or <span class="filepond--label-action">Browse</span>',
-
-            labelMaxFileSizeExceeded: 'File is too large',
-
-            labelMaxFileSize: 'Maximum file size is {filesize}',
-
-            labelFileTypeNotAllowed: 'File type is not allowed',
-
-            fileValidateTypeLabelExpectedTypes: 'Allowed file types: {allButLastType} or {lastType}',
-
-            labelFileProcessing: 'Uploading',
-
-            labelFileProcessingComplete: 'Upload complete',
-
-            labelFileProcessingError: 'Upload failed',
-
-            imagePreviewHeight: 170,
-
-            imageCropAspectRatio: '1:1',
-
-            imageResizeTargetWidth: 200,
-
-            imageResizeTargetHeight: 200,
-
-            stylePanelLayout: 'compact',
-
-            styleLoadIndicatorPosition: 'center bottom',
-
-            styleProgressIndicatorPosition: 'right bottom',
-
-            styleButtonRemoveItemPosition: 'left bottom',
-
-            styleButtonProcessItemPosition: 'right bottom'
-        });
-
-        FilePond.setOptions({
-
-            server: {
-
-                url: '/upload',
-
-                process: {
-
-                    method: 'POST',
-
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-
-                    onload: (response) => {
-                        console.log(
-                            'Upload successful:',
-                            response
-                        );
-
-                        return response;
-                    },
-
-                    onerror: (response) => {
-                        console.error(
-                            'Upload failed:',
-                            response
-                        );
-
-                        return response;
-                    }
-                }
-            }
-        });
-    </script>
-
+</script>
 
 
 </body>
